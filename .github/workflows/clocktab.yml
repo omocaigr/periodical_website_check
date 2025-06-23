@@ -23,5 +23,5 @@ jobs:
           pip install beautifulsoup4
 
       - name: Run the checker
-        run: python check_clocktab.py
+        run: python check_clocktab.py "${{ secrets.DISCORD_WEBHOOK_URL }}"
 

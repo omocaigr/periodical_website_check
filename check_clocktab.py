@@ -8,7 +8,7 @@ TARGETS = [
     ("https://studentvillage.ch/en/apply/", "sv_baseline_hash.txt", "paragraph"),
     ("https://www.livingscience.ch/kontakt-studentenzimmer-zuerich/?L=0", "ls_baseline_hash.txt", "full"),
 ]
-WEBHOOK = "https://discord.com/api/webhooks/1386691711354273897/4fNsgr7fjKauSfmkBk411K16Qjkd3i9o7n-CJ23SFUyZAtD8-yHA8keS169QgIV9tc2B"
+WEBHOOK = sys.argv[1]
 
 # ── LOGGING SETUP ────────────────────────────────────────────────────────────
 logging.basicConfig(

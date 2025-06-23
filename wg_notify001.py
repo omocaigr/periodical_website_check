@@ -34,7 +34,7 @@ def notify_discord(message: str) -> None:
 # ── MAIN LOOP ────────────────────────────────────────────────────────────────
 def main() -> None:
 
-    print("BASELINE:", hash_page("https://studentvillage.ch/en/apply/"))
+    print("BASELINE:", hash_page("https://www.livingscience.ch/kontakt-studentenzimmer-zuerich/?L=0"))
 
     if not DISCORD_WEBHOOK.startswith("https://"):
         sys.exit("→ Set DISCORD_WEBHOOK to a full https://discord.com/api/webhooks/... URL")
