@@ -18,7 +18,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          pip install requests
+          pip install beautifulsoup4
 
       - name: Run the checker
         run: python check_clocktab.py
+
