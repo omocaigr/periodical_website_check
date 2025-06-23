@@ -2,11 +2,10 @@
 import hashlib, logging, requests, datetime, os, sys
 from bs4 import BeautifulSoup
 
-#  ("https://news.ycombinator.com/newest", "yc_baseline_hash.txt", "full"),
+#  ("https://news.ycombinator.com/newest", "yc_baseline_hash.txt", "full"),("https://www.livingscience.ch/kontakt-studentenzimmer-zuerich/?L=0", "ls_baseline_hash.txt", "full"),
 # ── USER SETTINGS ────────────────────────────────────────────────────────────
 TARGETS = [
-    ("https://studentvillage.ch/en/apply/", "sv_baseline_hash.txt", "paragraph"),
-    ("https://www.livingscience.ch/kontakt-studentenzimmer-zuerich/?L=0", "ls_baseline_hash.txt", "full"),
+    ("https://studentvillage.ch/en/apply/", "sv_baseline_hash.txt", "paragraph")
 ]
 WEBHOOK = sys.argv[1]
 
