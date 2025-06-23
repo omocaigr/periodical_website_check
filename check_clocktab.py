@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 import hashlib, logging, requests, datetime, os, sys
+from bs4 import BeautifulSoup
 
 # ── USER SETTINGS ────────────────────────────────────────────────────────────
-URL = "https://news.ycombinator.com/newest"
-HASH_FILE = "yc_baseline_hash.txt"
+TARGETS = [
+    ("https://news.ycombinator.com/newest", "yc_baseline_hash.txt", "full"),
+    ("https://studentvillage.ch/en/apply/", "sv_baseline_hash.txt", "paragraph"),
+    ("https://www.livingscience.ch/kontakt-studentenzimmer-zuerich/?L=0", "ls_baseline_hash.txt", "full"),
+]
 WEBHOOK = "https://discord.com/api/webhooks/1386691711354273897/4fNsgr7fjKauSfmkBk411K16Qjkd3i9o7n-CJ23SFUyZAtD8-yHA8keS169QgIV9tc2B"
 
 # ── LOGGING SETUP ────────────────────────────────────────────────────────────
@@ -18,11 +22,22 @@ def hash_page(url: str) -> str:
     html = requests.get(url, timeout=10).text
     return hashlib.sha256(html.encode()).hexdigest()
 
-def load_baseline() -> str:
-    if not os.path.exists(HASH_FILE):
-        logging.error(f"{HASH_FILE} not found — commit a baseline hash first.")
+def hash_paragraph(url: str) -> str:
+    response = requests.get(url, timeout=10)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    paragraph = soup.select_one('p.font_fam_normal.font_size_25.font_size_xxs_16.font_size_xs_16.color_dblue')
+    if paragraph is None:
+        logging.error("Paragraph not found on Student Village page.")
         sys.exit(1)
-    return open(HASH_FILE).read().strip()
+    text = paragraph.get_text(strip=True)
+    normalized = ' '.join(text.split())
+    return hashlib.sha256(normalized.encode()).hexdigest()
+
+def load_baseline(file: str) -> str:
+    if not os.path.exists(file):
+        logging.error(f"{file} not found — commit a baseline hash first.")
+        sys.exit(1)
+    return open(file).read().strip()
 
 def notify_discord(msg: str):
     if not WEBHOOK:
@@ -33,17 +48,20 @@ def notify_discord(msg: str):
 
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 def main():
-    print("BASELINE:", hash_page(URL))
+    for url, hash_file, mode in TARGETS:
+        logging.info(f"Checking {url}")
+        if mode == "paragraph":
+            current_hash = hash_paragraph(url)
+        else:
+            current_hash = hash_page(url)
 
-    logging.info("Fetching current page and comparing to baseline...")
-    current_hash = hash_page(URL)
-    baseline = load_baseline()
+        baseline = load_baseline(hash_file)
 
-    if current_hash != baseline:
-        logging.info("Page content has changed!")
-        notify_discord(f"🔄 Page changed from baseline at {datetime.datetime.now().isoformat()}\n{URL}")
-    else:
-        logging.info("No change detected.")
+        if current_hash != baseline:
+            logging.info(f"Page content has changed: {url}")
+            notify_discord(f"🔄 Page changed from baseline at {datetime.datetime.now().isoformat()}\n{url}")
+        else:
+            logging.info("No change detected.")
 
 if __name__ == "__main__":
     main()
