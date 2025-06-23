@@ -1,69 +1,49 @@
 #!/usr/bin/env python3
-"""
-Baseline-only page watcher
-• Logs to the terminal on EVERY check
-• Posts to Discord whenever the page differs from the first hash
-"""
-
-import hashlib, logging, time, datetime, requests, sys
+import hashlib, logging, requests, datetime, os, sys
 
 # ── USER SETTINGS ────────────────────────────────────────────────────────────
-URL             = "https://news.ycombinator.com/newest"
-CHECK_INTERVAL  = 1                    # seconds between checks
-DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1386691711354273897/4fNsgr7fjKauSfmkBk411K16Qjkd3i9o7n-CJ23SFUyZAtD8-yHA8keS169QgIV9tc2B"
+URL = "https://news.ycombinator.com/newest"
+HASH_FILE = "yc_baseline_hash.txt"
+WEBHOOK = "https://discord.com/api/webhooks/1386691711354273897/4fNsgr7fjKauSfmkBk411K16Qjkd3i9o7n-CJ23SFUyZAtD8-yHA8keS169QgIV9tc2B"
 
 # ── LOGGING SETUP ────────────────────────────────────────────────────────────
 logging.basicConfig(
-    level=logging.INFO,                        # show every check
+    level=logging.INFO,
     format="%(asctime)s %(levelname)s: %(message)s",
     datefmt="%H:%M:%S"
 )
 
-# ── SMALL HELPERS ────────────────────────────────────────────────────────────
+# ── HELPERS ──────────────────────────────────────────────────────────────────
 def hash_page(url: str) -> str:
-    """Return SHA-256 of raw HTML (string)."""
     html = requests.get(url, timeout=10).text
     return hashlib.sha256(html.encode()).hexdigest()
 
-def notify_discord(message: str) -> None:
-    """Send a plain-text message to Discord; raise if it fails."""
-    r = requests.post(DISCORD_WEBHOOK, json={"content": message}, timeout=10)
-    if r.status_code >= 400:
-        raise RuntimeError(f"Discord HTTP {r.status_code}: {r.text[:200]}")
+def load_baseline() -> str:
+    if not os.path.exists(HASH_FILE):
+        logging.error(f"{HASH_FILE} not found — commit a baseline hash first.")
+        sys.exit(1)
+    return open(HASH_FILE).read().strip()
 
-# ── MAIN LOOP ────────────────────────────────────────────────────────────────
-def main() -> None:
-    if not DISCORD_WEBHOOK.startswith("https://"):
-        sys.exit("→ Set DISCORD_WEBHOOK to a full https://discord.com/api/webhooks/... URL")
+def notify_discord(msg: str):
+    if not WEBHOOK:
+        logging.warning("DISCORD_WEBHOOK not set.")
+        return
+    r = requests.post(WEBHOOK, json={"content": msg}, timeout=10)
+    r.raise_for_status()
 
-    baseline = hash_page(URL)  # one-time reference
-    logging.info("Baseline hash captured.")
-    try:
-        # quick connectivity sanity-check
-        notify_discord("🟢 Watcher started (baseline set).")
-        logging.info("Start-up message sent to Discord.")
-    except Exception as e:
-        logging.error(f"Unable to reach Discord webhook: {e}")
+# ── MAIN ─────────────────────────────────────────────────────────────────────
+def main():
+    print("BASELINE:", hash_page(URL))
 
-    try:
-        while True:
-            ts = datetime.datetime.now().strftime("%H:%M:%S")
-            try:
-                current = hash_page(URL)
-                changed = current != baseline
-                logging.info(f"[{ts}] checked (changed = {changed})")
-                if changed:
-                    try:
-                        notify_discord(f"🔄 Page changed from baseline at {ts}: {URL}")
-                        logging.info("Discord notification sent.")
-                    except Exception as e:
-                        logging.error(f"Discord error: {e}")
-            except Exception as e:
-                logging.error(f"Fetch/compare error: {e}")
+    logging.info("Fetching current page and comparing to baseline...")
+    current_hash = hash_page(URL)
+    baseline = load_baseline()
 
-            time.sleep(CHECK_INTERVAL)
-    except KeyboardInterrupt:
-        logging.info("Stopped by user. Goodbye!")
+    if current_hash != baseline:
+        logging.info("Page content has changed!")
+        notify_discord(f"🔄 Page changed from baseline at {datetime.datetime.now().isoformat()}\n{URL}")
+    else:
+        logging.info("No change detected.")
 
 if __name__ == "__main__":
     main()
